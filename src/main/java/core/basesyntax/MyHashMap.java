@@ -27,7 +27,7 @@ public class MyHashMap<K, V> implements MyMap<K, V> {
             capacity <<= 1;
         }
         this.loadFactor = loadFactor;
-        this.table = (Node<K, V>[]) new Node[capacity];
+        this.table = newNodeArray(capacity);
         this.threshold = (int) (capacity * loadFactor);
         this.size = 0;
     }
@@ -42,16 +42,16 @@ public class MyHashMap<K, V> implements MyMap<K, V> {
         } else {
             Node<K, V> node = current;
             while (true) {
-                if (keysEqual(node.key, key)) {
-                    node.value = value;
+                if (keysEqual(node.getKey(), key)) {
+                    node.setValue(value);
                     return;
                 }
-                if (node.next == null) {
-                    node.next = new Node<>(key, value, null);
+                if (node.getNext() == null) {
+                    node.setNext(new Node<>(key, value, null));
                     size++;
                     break;
                 }
-                node = node.next;
+                node = node.getNext();
             }
         }
         if (size > threshold) {
@@ -64,10 +64,10 @@ public class MyHashMap<K, V> implements MyMap<K, V> {
         int index = indexFor(hash(key), table.length);
         Node<K, V> node = table[index];
         while (node != null) {
-            if (keysEqual(node.key, key)) {
-                return node.value;
+            if (keysEqual(node.getKey(), key)) {
+                return node.getValue();
             }
-            node = node.next;
+            node = node.getNext();
         }
         return null;
     }
@@ -80,13 +80,33 @@ public class MyHashMap<K, V> implements MyMap<K, V> {
     /* ------------------ private helpers (after public) ------------------ */
 
     private static final class Node<K, V> {
-        final K key;
-        V value;
-        Node<K, V> next;
+        private final K key; // może być final
+        private V value;
+        private Node<K, V> next;
 
         Node(K key, V value, Node<K, V> next) {
             this.key = key;
             this.value = value;
+            this.next = next;
+        }
+
+        public K getKey() {
+            return key;
+        }
+
+        public V getValue() {
+            return value;
+        }
+
+        public void setValue(V value) {
+            this.value = value;
+        }
+
+        public Node<K, V> getNext() {
+            return next;
+        }
+
+        public void setNext(Node<K, V> next) {
             this.next = next;
         }
     }
@@ -100,7 +120,7 @@ public class MyHashMap<K, V> implements MyMap<K, V> {
     }
 
     private int indexFor(int hash, int length) {
-        return hash & (length - 1); // requires length be power of two
+        return hash & (length - 1);
     }
 
     private boolean keysEqual(K k1, K k2) {
@@ -110,18 +130,23 @@ public class MyHashMap<K, V> implements MyMap<K, V> {
     private void resize() {
         Node<K, V>[] oldTable = table;
         int newCapacity = oldTable.length << 1;
-        Node<K, V>[] newTable = (Node<K, V>[]) new Node[newCapacity];
-        for (int i = 0; i < oldTable.length; i++) {
-            Node<K, V> node = oldTable[i];
+        Node<K, V>[] newTable = newNodeArray(newCapacity);
+        for (Node<K, V> head : oldTable) { // enhanced for zamiast tradycyjnego for
+            Node<K, V> node = head;
             while (node != null) {
-                Node<K, V> nextNode = node.next;
-                int newIndex = indexFor(hash(node.key), newCapacity);
-                node.next = newTable[newIndex];
+                Node<K, V> nextNode = node.getNext();
+                int newIndex = indexFor(hash(node.getKey()), newCapacity);
+                node.setNext(newTable[newIndex]);
                 newTable[newIndex] = node;
                 node = nextNode;
             }
         }
         table = newTable;
         threshold = (int) (newCapacity * loadFactor);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Node<K, V>[] newNodeArray(int capacity) {
+        return (Node<K, V>[]) new Node[capacity];
     }
 }
