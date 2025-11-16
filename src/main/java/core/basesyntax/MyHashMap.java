@@ -35,25 +35,26 @@ public class MyHashMap<K, V> implements MyMap<K, V> {
     @Override
     public void put(K key, V value) {
         int index = indexFor(hash(key), table.length);
-        Node<K, V> current = table[index];
-        if (current == null) {
-            table[index] = new Node<>(key, value, null);
-            size++;
-        } else {
-            Node<K, V> node = current;
-            while (true) {
-                if (keysEqual(node.getKey(), key)) {
-                    node.setValue(value);
-                    return;
-                }
-                if (node.getNext() == null) {
-                    node.setNext(new Node<>(key, value, null));
-                    size++;
-                    break;
-                }
-                node = node.getNext();
+        Node<K, V> node = table[index];
+        Node<K, V> prev = null;
+
+        while (node != null) {
+            if (keysEqual(node.key, key)) {
+                node.value = value; // replace existing value
+                return;
             }
+            prev = node;
+            node = node.next;
         }
+
+        Node<K, V> newNode = new Node<>(key, value, null);
+        if (prev == null) {
+            table[index] = newNode;
+        } else {
+            prev.next = newNode;
+        }
+        size++;
+
         if (size > threshold) {
             resize();
         }
@@ -64,10 +65,10 @@ public class MyHashMap<K, V> implements MyMap<K, V> {
         int index = indexFor(hash(key), table.length);
         Node<K, V> node = table[index];
         while (node != null) {
-            if (keysEqual(node.getKey(), key)) {
-                return node.getValue();
+            if (keysEqual(node.key, key)) {
+                return node.value;
             }
-            node = node.getNext();
+            node = node.next;
         }
         return null;
     }
@@ -80,33 +81,13 @@ public class MyHashMap<K, V> implements MyMap<K, V> {
     /* ------------------ private helpers (after public) ------------------ */
 
     private static final class Node<K, V> {
-        private final K key; // może być final
+        private final K key;
         private V value;
         private Node<K, V> next;
 
         Node(K key, V value, Node<K, V> next) {
             this.key = key;
             this.value = value;
-            this.next = next;
-        }
-
-        public K getKey() {
-            return key;
-        }
-
-        public V getValue() {
-            return value;
-        }
-
-        public void setValue(V value) {
-            this.value = value;
-        }
-
-        public Node<K, V> getNext() {
-            return next;
-        }
-
-        public void setNext(Node<K, V> next) {
             this.next = next;
         }
     }
@@ -120,7 +101,7 @@ public class MyHashMap<K, V> implements MyMap<K, V> {
     }
 
     private int indexFor(int hash, int length) {
-        return hash & (length - 1);
+        return hash & (length - 1); // requires length be power of two
     }
 
     private boolean keysEqual(K k1, K k2) {
@@ -131,16 +112,18 @@ public class MyHashMap<K, V> implements MyMap<K, V> {
         Node<K, V>[] oldTable = table;
         int newCapacity = oldTable.length << 1;
         Node<K, V>[] newTable = newNodeArray(newCapacity);
-        for (Node<K, V> head : oldTable) { // enhanced for zamiast tradycyjnego for
+
+        for (Node<K, V> head : oldTable) {
             Node<K, V> node = head;
             while (node != null) {
-                Node<K, V> nextNode = node.getNext();
-                int newIndex = indexFor(hash(node.getKey()), newCapacity);
-                node.setNext(newTable[newIndex]);
+                Node<K, V> nextNode = node.next;
+                int newIndex = indexFor(hash(node.key), newCapacity);
+                node.next = newTable[newIndex];
                 newTable[newIndex] = node;
                 node = nextNode;
             }
         }
+
         table = newTable;
         threshold = (int) (newCapacity * loadFactor);
     }
